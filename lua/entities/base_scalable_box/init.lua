@@ -45,8 +45,8 @@ function CreateScalableBox(Player, Pos, Angle, Size)
 	return Ent
 end
 
-duplicator.RegisterEntityClass("base_scalable_box", CreateScalableBox, "Pos", "Angle", "Size")
-
 if PSA then
-	PSA.RegisterEntity("base_scalable_box", { "size" })
+	PSA.RegisterEntityClass("base_scalable_box", CreateScalableBox, "Size")
+else
+	duplicator.RegisterEntityClass("base_scalable_box", CreateScalableBox, "Pos", "Angle", "Size")
 end
