@@ -1,13 +1,38 @@
 include("shared.lua")
 
-function ENT:Initialize()
-	self:PhysicsInit(SOLID_VPHYSICS)
+local Queued = {}
+local NWVars = {
+	Size = function(Entity, Value)
+		-- Updating the clientside size one tick later to prevent problems on spawn
+		timer.Simple(engine.TickInterval(), function()
+			Entity:SetSize(Value)
+		end)
+	end,
+	OriginalSize = function(Entity, Value)
+		Entity.OriginalSize = Value
+		Entity.Size	= Value
 
-	local Size  = self:GetNW2Vector("Size")
-	local Scale = Vector(0.02107, 0.02107, 0.02107) * Size
-	local Phys  = self:GetPhysicsObject()
-	local Mesh  = Phys:GetMeshConvexes()
-	local Mat   = Matrix()
+		if Queued[Entity] then
+			Queued[Entity] = nil
+			Entity:SetSize(Value)
+		end
+	end
+}
+
+function ENT:SetSize(NewSize)
+	if not self.OriginalSize then
+		Queued[self] = true
+		return
+	end
+
+	local Size  = self.OriginalSize
+	local Scale = Vector(1 / Size.x, 1 / Size.y, 1 / Size.z) * NewSize
+
+	self:PhysicsInit(SOLID_VPHYSICS) -- Physics must be set to VPhysics before re-scaling
+
+	local Phys = self:GetPhysicsObject()
+	local Mesh = Phys:GetMeshConvexes()
+	local Mat  = Matrix()
 
 	for I, Hull in pairs(Mesh) do
 		for J, Vertex in pairs(Hull) do
@@ -41,3 +66,9 @@ function ENT:Think()
 		Obj:Sleep()
 	end
 end
+
+hook.Add("EntityNetworkedVarChanged", "Scalable Box NWChange", function(Entity, Name, _, New)
+	if NWVars[Name] then
+		NWVars[Name](Entity, New)
+	end
+end)
