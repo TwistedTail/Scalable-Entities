@@ -2,17 +2,6 @@ AddCSLuaFile("shared.lua")
 AddCSLuaFile("cl_init.lua")
 include("shared.lua")
 
-local function GetOriginalSize(Entity)
-	if not Entity.OriginalSize then
-		local Min, Max = Entity:GetCollisionBounds()
-
-		Entity.OriginalSize = -Min + Max
-		Entity:SetNW2Vector("OriginalSize", -Min + Max)
-	end
-
-	return Entity.OriginalSize
-end
-
 function CreateWireScalable(Player, Pos, Angle, Size)
 	local Ent = ents.Create("base_scalable_wire")
 
@@ -31,10 +20,21 @@ function CreateWireScalable(Player, Pos, Angle, Size)
 end
 duplicator.RegisterEntityClass("base_scalable_wire", CreateWireScalable, "Pos", "Angle", "Size")
 
+function ENT:GetOriginalSize()
+	if not self.OriginalSize then
+		local Min, Max = self:GetCollisionBounds()
+
+		self.OriginalSize = -Min + Max
+		self:SetNW2Vector("OriginalSize", -Min + Max)
+	end
+
+	return self.OriginalSize
+end
+
 function ENT:SetSize(NewSize)
 	if NewSize == self.Size then return end
 
-	local Size  = GetOriginalSize(self)
+	local Size  = self:GetOriginalSize()
 	local Scale = Vector(1 / Size.x, 1 / Size.y, 1 / Size.z) * NewSize
 
 	self:PhysicsInit(SOLID_VPHYSICS) -- Physics must be set to VPhysics before re-scaling
