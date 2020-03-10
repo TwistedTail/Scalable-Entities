@@ -13,12 +13,10 @@ local function GetOriginalSize(Entity)
 	return Entity.OriginalSize
 end
 
-function CreateScalableBox(Player, Pos, Angle, Size)
-	local Ent = ents.Create("base_scalable_box")
+function CreateScalable(Player, Pos, Angle, Size)
+	local Ent = ents.Create("base_scalable")
 
 	if not IsValid(Ent) then return end
-
-	Size = Vector(Size)
 
 	Ent:SetModel("models/hunter/blocks/cube1x1x1.mdl")
 	Ent:SetAngles(Angle)
@@ -31,12 +29,7 @@ function CreateScalableBox(Player, Pos, Angle, Size)
 
 	return Ent
 end
-
-if PSA then
-	PSA.RegisterEntityClass("base_scalable_box", CreateScalableBox, "Size")
-else
-	duplicator.RegisterEntityClass("base_scalable_box", CreateScalableBox, "Pos", "Angle", "Size")
-end
+duplicator.RegisterEntityClass("base_scalable", CreateScalable, "Pos", "Angle", "Size")
 
 function ENT:SetSize(NewSize)
 	if NewSize == self.Size then return end
@@ -45,20 +38,22 @@ function ENT:SetSize(NewSize)
 	local Scale = Vector(1 / Size.x, 1 / Size.y, 1 / Size.z) * NewSize
 
 	self:PhysicsInit(SOLID_VPHYSICS) -- Physics must be set to VPhysics before re-scaling
+	self:SetSolid(SOLID_VPHYSICS)
+	self:SetMoveType(MOVETYPE_VPHYSICS)
 
 	local Phys = self:GetPhysicsObject()
 	local Mesh = Phys:GetMeshConvexes()
 
-	for I, Hull in pairs(Mesh) do
+	for I, Hull in pairs(Mesh) do -- Scale the mesh
 		for J, Vertex in pairs(Hull) do
 			Mesh[I][J] = Vertex.pos * Scale
 		end
 	end
 
-	self:PhysicsInitMultiConvex(Mesh)
-	self:EnableCustomCollisions(true)
+	self:PhysicsInit(SOLID_VPHYSICS)
 	self:SetMoveType(MOVETYPE_VPHYSICS)
-	self:SetSolid(SOLID_VPHYSICS)
+	self:PhysicsInitMultiConvex(Mesh) -- Apply new mesh
+	self:EnableCustomCollisions(true)
 
 	self:SetNW2Vector("Size", NewSize)
 	self.Size = NewSize
@@ -66,7 +61,9 @@ function ENT:SetSize(NewSize)
 	local Obj = self:GetPhysicsObject()
 
 	if IsValid(Obj) then
-		Obj:SetMass(50)
+		Obj:SetMass(Obj:GetVolume() / 1000)
+
+		if self.OnResized then self:OnResized() end
 
 		hook.Run("OnScaledBoxSizeChange", self, Obj, NewSize)
 	end

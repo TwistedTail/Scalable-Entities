@@ -1,7 +1,7 @@
 include("shared.lua")
 
 local Queued = {}
-local NWVars = {
+local NWVars = { -- Funcs called over the network
 	Size = function(Entity, Value)
 		-- Updating the clientside size one tick later to prevent problems on spawn
 		timer.Simple(engine.TickInterval(), function()
@@ -34,13 +34,13 @@ function ENT:SetSize(NewSize)
 	local Mesh = Phys:GetMeshConvexes()
 	local Mat  = Matrix()
 
+	Mat:Scale(Scale)
+
 	for I, Hull in pairs(Mesh) do
 		for J, Vertex in pairs(Hull) do
 			Mesh[I][J] = Vertex.pos * Scale
 		end
 	end
-
-	Mat:Scale(Scale)
 
 	self:EnableMatrix("RenderMultiply", Mat)
 	self:PhysicsInitMultiConvex(Mesh)
@@ -56,14 +56,14 @@ function ENT:SetSize(NewSize)
 	end
 end
 
-function ENT:Think()
-	local Obj = self:GetPhysicsObject()
+function ENT:CalcAbsolutePosition() -- Faking sync
+	local Phys = self:GetPhysicsObject()
 
-	if IsValid(Obj) then
-		Obj:SetPos(self:GetPos())
-		Obj:SetAngles(self:GetAngles())
-		Obj:EnableMotion(false)
-		Obj:Sleep()
+	if IsValid(Phys) then
+		Phys:SetPos(self:GetPos())
+		Phys:SetAngles(self:GetAngles())
+
+		Phys:EnableMotion(false) -- Disable prediction
 	end
 end
 
