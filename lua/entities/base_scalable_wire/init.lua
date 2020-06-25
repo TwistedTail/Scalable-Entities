@@ -22,7 +22,7 @@ duplicator.RegisterEntityClass("base_scalable_wire", CreateWireScalable, "Pos", 
 
 function ENT:GetOriginalSize()
 	if not self.OriginalSize then
-		local Min, Max = self:GetCollisionBounds()
+		local Min, Max = self:GetPhysicsObject():GetAABB()
 
 		self.OriginalSize = -Min + Max
 		self:SetNW2Vector("OriginalSize", -Min + Max)
@@ -65,6 +65,20 @@ function ENT:SetSize(NewSize)
 
 		if self.OnResized then self:OnResized() end
 
-		hook.Run("OnScaledBoxSizeChange", self, Obj, NewSize)
+		hook.Run("OnEntityScaled", self, Obj, NewSize)
 	end
 end
+
+util.AddNetworkString("RequestOriginalSize")
+
+net.Receive("RequestOriginalSize", function(_, Ply) -- A client requested the size of an entity
+	local E = net.ReadEntity()
+
+	if IsValid(E) and E.OriginalSize then -- Send them the size
+		net.Start("RequestOriginalSize")
+			net.WriteEntity(E)
+			net.WriteVector(E.OriginalSize)
+			net.WriteVector(E.Size)
+		net.Send(Ply)
+	end
+end)

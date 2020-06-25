@@ -10,7 +10,6 @@ local NWVars = { -- Funcs called over the network
 	end,
 	OriginalSize = function(Entity, Value)
 		Entity.OriginalSize = Value
-		Entity.Size	= Value
 
 		if Queued[Entity] then
 			Queued[Entity] = nil
@@ -19,14 +18,35 @@ local NWVars = { -- Funcs called over the network
 	end
 }
 
+net.Receive("RequestOriginalSize", function()
+	local E = net.ReadEntity()
+
+	local Original = net.ReadVector()
+	local Current  = net.ReadVector()
+
+	E.OriginalSize = Original
+	E:SetSize(Current)
+
+	if Queued[E] then
+		Queued[E] = nil
+	end
+end)
+
 function ENT:SetSize(NewSize)
-	if not self.OriginalSize then
+	if not self.OriginalSize then -- For whatever reason, this doesn't always get networked, so it needs to be requested from the server
 		Queued[self] = true
+
+		net.Start("RequestOriginalSize")
+			net.WriteEntity(self)
+		net.SendToServer()
+
 		return
 	end
 
 	local Size  = self.OriginalSize
 	local Scale = Vector(1 / Size.x, 1 / Size.y, 1 / Size.z) * NewSize
+
+	self.Size = NewSize
 
 	self:PhysicsInit(SOLID_VPHYSICS) -- Physics must be set to VPhysics before re-scaling
 
@@ -53,6 +73,10 @@ function ENT:SetSize(NewSize)
 	if IsValid(Obj) then
 		Obj:EnableMotion(false)
 		Obj:Sleep()
+
+		if self.OnResized then self:OnResized() end
+
+		hook.Run("OnEntityScaled", self, Obj, NewSize)
 	end
 end
 

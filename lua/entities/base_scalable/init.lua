@@ -65,6 +65,6 @@ function ENT:SetSize(NewSize)
 
 		if self.OnResized then self:OnResized() end
 
-		hook.Run("OnScaledBoxSizeChange", self, Obj, NewSize)
+		hook.Run("OnEntityScaled", self, Obj, NewSize)
 	end
 end
